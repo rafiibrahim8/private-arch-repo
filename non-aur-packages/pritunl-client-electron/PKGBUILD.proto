@@ -1,0 +1,34 @@
+pkgname=pritunl-client-electron
+pkgver=1.2.3128.59
+pkgrel=1
+pkgdesc="Pritunl OpenVPN Electron Client"
+url="https://github.com/pritunl/pritunl-client-electron"
+arch=("x86_64")
+license=("custom")
+backup=("var/log/pritunl-client.log" "var/log/pritunl-client.log.1")
+install=install.sh
+conflicts=("pritunl-client" "pritunl-client-electron")
+provides=("pritunl-client-electron")
+validpgpkeys=("7568D9BB55FF9E5287D586017AE645C0CF8E292A")
+depends=(###DEPENDS###)
+source=("###SRC###" "###SRC_SIG###")
+sha256sums=("###SHA256SUM###" "SKIP")
+
+prepare() {
+  mv .INSTALL ../install.sh
+  rm .BUILDINFO .MTREE *.pkg.tar.zst ../*.pkg.tar.zst ../*.pkg.tar.zst.sig
+}
+
+pkgver() {
+  version=$(cat .PKGINFO | grep  -oP 'pkgver(\s?)+=(\s?)+\K[^-\s\n]+')
+  rm .PKGINFO
+  echo "$version"
+}
+
+build() {
+  echo 'Building...'
+}
+
+package() {
+  mv etc usr var "$pkgdir"
+}

@@ -1,0 +1,4 @@
+output/
+pkgbuilder/__pycache__
+gnupg.tar.gz
+env.json
