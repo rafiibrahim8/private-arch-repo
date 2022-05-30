@@ -15,7 +15,7 @@
     git clone https://github.com/rafiibrahim8/private-arch-repo.git && cd private-arch-repo
     ```
 
-3. Create `gnupg.tar.gz` and `env.json` (see [CREATING/EDITING FILES](#creatingediting-files))
+3. Create `gnupg.tar.gz` (see [CREATING/EDITING FILES](#creatingediting-files))
 
 4. Edit `internal-scripts/init-image.sh` (see [CREATING/EDITING FILES](#editing-internal-scriptsinit-imagesh))
 
@@ -26,12 +26,16 @@
 
 6. Edit packages on `aur_packages.json` and `non-aur-packages` accoding to your need (see [EDITING PACKAGES](#editing-packages)).
 
-7. Run `run.sh`
+7. Edit `run.sh` (see [CREATING/EDITING FILES](#creatingediting-files))
+
+8. Copy/Move `aur_packages.json` and `non-aur-packages` to `HOST_REPO_PKG_DIR` of your `run.sh` file.
+
+9. Run `run.sh`
     ```
     bash run.sh
     ```
 
-8. [Configure NGINX](#configuring-nginx)
+10. [Configure NGINX](#configuring-nginx)
 
 9. [Add Repo to PACMAN](#adding-repo-to-pacman)
 
@@ -121,12 +125,6 @@ To create it follow the steps
     mv .gnupg.bak .gnupg
     ```
 
-## Creating env.json
-`env.json` is a json file containing environment variables.
-Following fields are currently supported:
-
-`debug_discord`: Discord webhook where error messages will be send.
-
 ## Editing internal-scripts/init-image.sh
 The lines between `<Edit this values>` and `</Edit this values>` on `internal-scripts/init-image.sh` contains editable parameters.
 
@@ -135,8 +133,16 @@ The parameters are follows:
 * `FULL_NAME`: Your full name 
 * `EMAIL`: Your email address
 * `KEY`: Key ID
-* `PRIORITY_MIRROR_LOC`: Country code of mirrors which will be use frist to obtain packages
 * `REPO_NAME`: Name of your repository
+* `MIRRIRLIST_URL`: Pacman mirrorlist file url
+
+## Editing run.sh
+The lines between `<Edit this values>` and `</Edit this values>` on `run.sh` contains editable parameters.
+
+The parameters are follows:
+
+* `HOST_REPO_DIR`: Local Machine directory where the packages will be saved
+* `HOST_REPO_PKG_DIR`: The local directory which will contain `aur_packages.json` and `non-aur-packages`
 
 # ISSUES
 

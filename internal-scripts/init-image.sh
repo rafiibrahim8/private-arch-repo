@@ -5,34 +5,40 @@
 FULL_NAME="Ibrahim Rafi"
 EMAIL="rafiibrahim8@hotmail.com"
 KEY="88BCCC030B08626C"
-PRIORITY_MIRROR_LOC="sg"
 REPO_NAME="private-arch-repo"
+MIRRIRLIST_URL="https://gist.githubusercontent.com/rafiibrahim8/65092ab7bf8d9ebf416d160f002353a0/raw/dfb01c1fc96dadb4a278d8840a2486ba1d75bddc/mirrorlist-v20220530"
 ## </Edit this values>
+
+REPO_DIR='/var/Repo'
+PKG_LIST_DIR='/var/RepoPkgs'
 
 echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf
 
-mirrorlist=$(curl -Ls 'https://archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on')
-mirrorlist=$(echo "$mirrorlist" | sed '/^## Bangladesh/,+1d' | sed '/#Server/s/^#//g')
-priority=$(echo -e '##\n## Priority Mirrors\n##\n\n## Bangladesh\nServer = http://mirror.xeonbd.com/archlinux/$repo/os/$arch')
-echo -e "$priority\n\n$mirrorlist" > /etc/pacman.d/mirrorlist
+curl -L -o /etc/pacman.d/mirrorlist "$MIRRIRLIST_URL"
 
 pacman -Sy --noconfirm --needed sudo base-devel git python-pip
 
-curl -L -o /usr/bin/build-aur-pkg https://github.com/rafiibrahim8/private-arch-repo/raw/main/internal-scripts/build-aur-pkg.sh
+cp internal-scripts/build-aur-pkg.sh /usr/bin/build-aur-pkg
 chmod +x /usr/bin/build-aur-pkg
 
-curl -L -o /usr/bin/build-non-aur-pkg https://github.com/rafiibrahim8/private-arch-repo/raw/main/internal-scripts/build-non-aur-pkg.sh
+cp internal-scripts/build-non-aur-pkg.sh /usr/bin/build-non-aur-pkg
 chmod +x /usr/bin/build-non-aur-pkg
 
-curl -L -o /usr/bin/gen_mirrorlist.py https://gist.githubusercontent.com/rafiibrahim8/b27cc3970810c39b673db3b94df05768/raw/31506642f3fdd194fe441e8b821029ec75fe29e3/gen_mirrorlist.py
-chmod +x /usr/bin/gen_mirrorlist.py
+cp internal-scripts/start-builder.sh /usr/bin/start-builder
+chmod +x /usr/bin/start-builder
 
-echo "$PRIORITY_MIRROR_LOC" > /etc/private-arch-repo-priority-mirror.name
-echo "$REPO_NAME" > /etc/private-arch-repo.name
 echo "PACKAGER=\"$FULL_NAME <$EMAIL>\"" >> /etc/makepkg.conf
 echo "GPGKEY=\"$KEY\"" >> /etc/makepkg.conf
 
-gen_mirrorlist.py "$(cat /etc/private-arch-repo-priority-mirror.name 2>/dev/null)"
+mkdir /etc/private-arch-repo
+echo "$REPO_NAME" > /etc/private-arch-repo/name
+echo "$REPO_DIR" > /etc/private-arch-repo/repo_dir
+echo "$PKG_LIST_DIR" > /etc/private-arch-repo/pkg_list_dir
+
+mkdir -p "$REPO_DIR"
+mkdir -p "$PKG_LIST_DIR"
 
 echo 'builder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/builder
 useradd -m -s /bin/bash builder
+
+curl -L -o /etc/pacman.d/mirrorlist "$MIRRIRLIST_URL"

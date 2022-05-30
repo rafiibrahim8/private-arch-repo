@@ -5,22 +5,18 @@ import json
 import os
 
 from read_repo_db import ReadRepoDB
-from discord_debug import DebugDiscord
 
 class BuildQueue:
-    def __init__(self, dest_dir='output', debug_discord=None):
-        dest = os.path.normpath(os.path.join(os.getcwd(), dest_dir))
-        self.__debug_discord = debug_discord
-        self.__common_command = f'docker run -u builder --rm -v {dest}:/output arch-pkgbuild'
+    def __init__(self):
         self.__queue = asyncio.Queue()
     
     def put(self, command):
-        self.__queue.put_nowait(f'{self.__common_command} {command}')
+        self.__queue.put_nowait(command)
     
     def __run_impl(self, command):
         success = os.system(command) == 0
         if not success and self.__debug_discord:
-            self.__debug_discord.error(f'Command failed with: {command}')
+            print(f'Command Failed: {command}')
         
     async def run(self):
         while True:
@@ -34,14 +30,12 @@ class CheckerCommon:
             await asyncio.sleep(self._wait_time)
 
 class CheckAUR(CheckerCommon):
-    def __init__(self, build_queue, repo_dir='output', repo_name='private-arch-repo', list_json='aur_packages.json', interval=3600, debug_discord=None):
+    def __init__(self, build_queue, repo_dir , repo_name, list_json, interval):
         self._wait_time = interval
-        self.__debug_discord = debug_discord
         self.__repo_dir = repo_dir
         self.__repo_name = repo_name
         self.__build_queue = build_queue
-        with open(list_json, 'r') as f:
-            self.__packages = json.load(f)
+        self.__list_json = list_json
     
     def _run_impl(self):
         try:
@@ -49,14 +43,16 @@ class CheckAUR(CheckerCommon):
         except KeyboardInterrupt:
             raise
         except:
-            self.__debug_discord and self.__debug_discord.error(f'Running error occoured. Reason: {format_exc()}')
+            print(f'Running error occoured. Reason: {format_exc()}')
 
     def __run_implx(self):
-        if not self.__packages:
+        with open(self.__list_json, 'r') as f:
+            packages = json.load(f)
+        if not packages:
             return
         
         url = 'https://aur.archlinux.org/rpc/?v=5&type=info'
-        for i in self.__packages:
+        for i in packages:
             url += f'&arg[]={i}'
         aur_db = requests.get(url).json()['results']
         local_db = ReadRepoDB(os.path.join(self.__repo_dir, f'{self.__repo_name}.db.tar.gz')).read()
@@ -70,13 +66,12 @@ class CheckAUR(CheckerCommon):
                 self.__build_queue.put(f'build-aur-pkg {package_name}')
 
 class CheckNonAUR(CheckerCommon):
-    def __init__(self, build_queue, repo_dir='output', repo_name='private-arch-repo', interval=3600, debug_discord=None):
+    def __init__(self, build_queue, repo_dir, repo_name, non_aur_dir, interval):
         self._wait_time = interval
         self.__build_queue = build_queue
         self.__repo_dir = repo_dir
         self.__repo_name = repo_name
-        self.__debug_discord = debug_discord
-        self.__non_aur_dir = 'non-aur-packages'
+        self.__non_aur_dir = non_aur_dir
 
     def __check_package(self, name):
         local_db = ReadRepoDB(os.path.join(self.__repo_dir, f'{self.__repo_name}.db.tar.gz')).read()
@@ -100,16 +95,23 @@ class CheckNonAUR(CheckerCommon):
             except KeyboardInterrupt:
                 raise
             except:
-                self.__debug_discord and self.__debug_discord.error(f'Running error occoured. Reason: {format_exc()}')
+                print(f'Running error occoured. Reason: {format_exc()}')
 
 class Checker:
-    def __init__(self, repo_dir='output', repo_name='private-arch-repo', aur_list_json='aur_packages.json', interval=3600, debug_discord_url=None):
-        debug_discord = DebugDiscord(debug_discord_url) if debug_discord_url else None
-        self.__buid_queue = BuildQueue(repo_dir, debug_discord)
-        self.__check_aur = CheckAUR(self.__buid_queue, repo_dir, repo_name, aur_list_json, interval, debug_discord)
-        self.__check_non_aur = CheckNonAUR(self.__buid_queue, repo_dir, repo_name, interval, debug_discord)
+    def __init__(self, interval=14400):
+        with open('/etc/private-arch-repo/name', 'r') as f:
+            repo_name=f.read().strip()
+        with open('/etc/private-arch-repo/repo_dir', 'r') as f:
+            repo_dir=f.read().strip()
+        with open('/etc/private-arch-repo/pkg_list_dir', 'r') as f:
+            pkg_list_dir=f.read().strip()
+        
+        self.__buid_queue = BuildQueue()
+        aur_list_json = os.path.join(pkg_list_dir, 'aur_packages.json')
+        non_aur_dir = os.path.join(pkg_list_dir, 'non-aur-packages')
 
-        os.makedirs(repo_dir, exist_ok=True)
+        self.__check_aur = CheckAUR(self.__buid_queue, repo_dir, repo_name, aur_list_json, interval)
+        self.__check_non_aur = CheckNonAUR(self.__buid_queue, repo_dir, repo_name, non_aur_dir , interval)
 
     def run(self):
         loop = asyncio.get_event_loop()
